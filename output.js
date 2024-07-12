@@ -1,4 +1,4 @@
-//Wed Jul 10 2024 04:46:22 GMT+0000 (Coordinated Universal Time)
+//Fri Jul 12 2024 04:24:43 GMT+0000 (Coordinated Universal Time)
 //Base:https://github.com/echo094/decode-js
 //Modify:https://github.com/smallfawn/decode_action
 const axios = require("axios");
