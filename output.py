@@ -1,11 +1,11 @@
-#2024-08-19 05:36:22
+#2024-08-20 06:03:14
 
 import requests
 import time
 import random
 import threading
 import os
-
+thread_TF = True
 
 class qmzy():
     def __init__(self,userid) -> None:
@@ -53,13 +53,41 @@ class qmzy():
         params = {
             "udid": self.uid,
             "device_id": self.device,
-            "did": "1825190776212557826"
+            "did": self.did
         }
         response = requests.get(url, headers=self.headers, params=params)
         if 'SUCCESS' in response.json().get('message'):
             print("领取成功")
         else:
             print(f"领取失败：{response.json().get('message')}")
+
+    def get_did(self):
+        url = 'http://app.livelive.com.cn/api/v10/build_data'
+        params = {
+            "udid": self.uid,
+            "device_id": self.device,
+            "mapIndex": "1"
+        }
+        response = requests.get(url, headers=self.headers, params=params)
+        if 'SUCCESS' in response.json().get('message'):
+            for did in response.json().get('data'):
+                self.did = did.get('did')
+                self.get_reward()
+        else:
+            print(f"获取店铺失败：{response.json().get('message')}")
+    
+    def bean(self):
+        url = 'http://app.livelive.com.cn/api/v10/forging_bean'
+        params = {
+            "udid": self.uid,
+            "device_id": self.device,
+            "type": "1"
+        }
+        response = requests.get(url, headers=self.headers, params=params)
+        if 'SUCCESS' in response.json().get('message'):
+            print('锻造金豆成功')
+        else:
+            print('锻造金豆失败')
 
     def user_info(self):
         url = 'http://app.livelive.com.cn/api/v10/user_info'
@@ -69,16 +97,19 @@ class qmzy():
         }
         response = requests.get(url, headers=self.headers, params=params)
         if 'SUCCESS' in response.json().get('message'):
-            jinbi = response.json().get('data').get('virtual_assets1')
-            jindou = response.json().get('data').get('virtual_assets2')
+            jinbi = float(response.json().get('data').get('virtual_assets1'))
+            jindou = float(response.json().get('data').get('virtual_assets2'))
             print(f"账户：\n金币：{jinbi}\n金豆{jindou}")
+            if jinbi >= 10:
+                for num in range(int(jinbi / 10)):
+                    self.bean()
         else:
             print(f"领取失败：{response.json().get('message')}")
 
     def main(self):
         self.task_info()
         time.sleep(2)
-        self.get_reward()
+        self.get_did()
         self.user_info()
 
 
