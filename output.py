@@ -1,11 +1,16 @@
-#2024-08-20 06:03:14
+#2024-08-21 03:11:05
 
 import requests
 import time
 import random
 import threading
+import string
 import os
-thread_TF = True
+
+def random_str():
+    characters = string.ascii_letters + string.digits
+    random_string = ''.join(random.choice(characters) for _ in range(32))
+    return random_string
 
 class qmzy():
     def __init__(self,userid) -> None:
@@ -22,13 +27,13 @@ class qmzy():
         url = "http://app.livelive.com.cn/api/v10/task_achievements_get"
         params = {
             "udid": self.uid,
-            "device_id": self.device,
+            "device_id": random_str(),
             "index": "0"
         }
         response = requests.get(url, headers=self.headers, params=params)
         if 'SUCCESS' in response.json().get('message'):
             print("观看成功")
-            time.sleep(random.randint(10,20))
+            time.sleep(random.randint(10,15))
             self.signin()
         else:
             print(f"观看失败：{response.json().get('message')}")
@@ -37,9 +42,10 @@ class qmzy():
         url = 'http://app.livelive.com.cn/api/v10/task_achievements'
         params = {
             "udid": self.uid,
-            "device_id": self.device
+            "device_id": random_str()
         }
         response = requests.get(url, headers=self.headers, params=params)
+        print(response.json())
         if 'SUCCESS' in response.json().get('message'):
             complete = response.json().get('data')[0].get('complete')
             max_task = response.json().get('data')[0].get('max')
@@ -52,7 +58,7 @@ class qmzy():
         url = 'http://app.livelive.com.cn/api/v10/build_get'
         params = {
             "udid": self.uid,
-            "device_id": self.device,
+            "device_id": random_str(),
             "did": self.did
         }
         response = requests.get(url, headers=self.headers, params=params)
@@ -65,7 +71,7 @@ class qmzy():
         url = 'http://app.livelive.com.cn/api/v10/build_data'
         params = {
             "udid": self.uid,
-            "device_id": self.device,
+            "device_id": random_str(),
             "mapIndex": "1"
         }
         response = requests.get(url, headers=self.headers, params=params)
@@ -80,7 +86,7 @@ class qmzy():
         url = 'http://app.livelive.com.cn/api/v10/forging_bean'
         params = {
             "udid": self.uid,
-            "device_id": self.device,
+            "device_id": random_str(),
             "type": "1"
         }
         response = requests.get(url, headers=self.headers, params=params)
@@ -93,7 +99,7 @@ class qmzy():
         url = 'http://app.livelive.com.cn/api/v10/user_info'
         params = {
             "udid": self.uid,
-            "device_id": self.device,
+            "device_id": random_str(),
         }
         response = requests.get(url, headers=self.headers, params=params)
         if 'SUCCESS' in response.json().get('message'):
@@ -139,4 +145,3 @@ if __name__ == "__main__":
             main.main()
             print(f'----------结束第{i+1}个账号----------')
             time.sleep(10)
-            
