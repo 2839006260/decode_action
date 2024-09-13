@@ -1,147 +1,204 @@
-#2024-08-21 03:11:05
+#2024-09-13 13:29:04
 
+import base64
+import json
 import requests
-import time
 import random
-import threading
+import time
+import hashlib
 import string
+import threading
 import os
 
-def random_str():
-    characters = string.ascii_letters + string.digits
-    random_string = ''.join(random.choice(characters) for _ in range(32))
-    return random_string
-
-class qmzy():
-    def __init__(self,userid) -> None:
-        self.uid = userid.split('#')[0]
-        self.device = userid.split('#')[1]
-        self.headers = {
-            "Accept-Encoding": "gzip,deflate",
-            "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 11; Redmi K30i 5G Build/RKQ1.200826.002)",
-            "Host": "app.livelive.com.cn",
-            "Connection": "Keep-Alive"
+class qqmc():
+    def __init__(self,token) -> None:
+        self.device = token.split('#')[0]
+        self.token = token.split('#')[1]
+        self.headers_g = {
+            "Authorization": self.token,
+            "X-Version-Code": "105",
+            "X-Platform": "android",
+            "X-System": "11",
+            "X-Brand": "Redmi",
+            "X-Device-ID": self.device,
+            "X-Client-Id": "com.yourong.app.qqmc",
+            "distributor-key": "qqmc",
+            "Host": "qqmc.huitui.pro",
+            "Connection": "Keep-Alive",
+            "Accept-Encoding": "gzip",
+            "User-Agent": "okhttp/4.9.3"
+        }
+        self.headers_p = {
+            "Authorization": self.token,
+            "X-Version-Code": "105",
+            "X-Platform": "android",
+            "X-System": "11",
+            "X-Brand": "Redmi",
+            "X-Device-ID": self.device,
+            "X-Client-Id": "com.yourong.app.qqmc",
+            "distributor-key": "qqmc",
+            "Content-Type": "application/json; charset=UTF-8",
+            "Host": "qqmc.huitui.pro",
+            "Connection": "Keep-Alive",
+            "Accept-Encoding": "gzip",
+            "User-Agent": "okhttp/4.9.3"
         }
 
-    def signin(self):
-        url = "http://app.livelive.com.cn/api/v10/task_achievements_get"
-        params = {
-            "udid": self.uid,
-            "device_id": random_str(),
-            "index": "0"
-        }
-        response = requests.get(url, headers=self.headers, params=params)
-        if 'SUCCESS' in response.json().get('message'):
-            print("观看成功")
-            time.sleep(random.randint(10,15))
-            self.signin()
+    def get_nonce(self):
+        characters = string.ascii_lowercase + string.digits
+        self.nonce = ''
+        for _ in range(32):
+            self.nonce += random.choice(characters)
+    def get_md5(self,message):
+        md5 = hashlib.md5()
+        md5.update(message.encode('utf-8'))
+        return md5.hexdigest()
+
+    def tasks(self):
+        url = "http://qqmc.huitui.pro/tasks"
+        response = requests.get(url, headers=self.headers_g)
+        if response.json().get('code') == 200001:
+            print('获取任务列表成功')
+            self.task_list = {}
+            for tasks in response.json().get('data').get('tasks'):
+                if tasks.get('finished'):
+                    continue
+                if tasks.get('id') == 1 or tasks.get('id') == 2:
+                    self.task_list[tasks.get('name')] = tasks.get('id')
         else:
-            print(f"观看失败：{response.json().get('message')}")
-
-    def task_info(self):
-        url = 'http://app.livelive.com.cn/api/v10/task_achievements'
-        params = {
-            "udid": self.uid,
-            "device_id": random_str()
-        }
-        response = requests.get(url, headers=self.headers, params=params)
-        print(response.json())
-        if 'SUCCESS' in response.json().get('message'):
-            complete = response.json().get('data')[0].get('complete')
-            max_task = response.json().get('data')[0].get('max')
-            if complete < max_task:
-                self.signin()
+            print(f"获取任务失败：{response.json().get('message')}")
+    
+    def daily(self,k):
+        t = str(int(time.time()*1000))
+        self.get_nonce()
+        if self.task_list[k] == 1:
+            if len(self.device) <= 16:
+                message = f"{self.device}&{self.task_list[k]}&{t}&{self.nonce}&T50uedlIX0fsgr5i0cGQdriBjmSAiLqC&com.yourong.app.qqmc"
             else:
-                print('今日任务已完成')
+                message = f"{self.task_list[k]}&{t}&{self.nonce}&{self.device}&T50uedlIX0fsgr5i0cGQdriBjmSAiLqC&com.yourong.app.qqmc"
+        elif self.task_list[k] == 2:
+            if len(self.device) <= 16:
+                message = f"{self.device}&{t}&{self.task_list[k]}&{self.nonce}&T50uedlIX0fsgr5i0cGQdriBjmSAiLqC&com.yourong.app.qqmc"
+            else:
+                message = f"{t}&{self.task_list[k]}&{self.nonce}&{self.device}&T50uedlIX0fsgr5i0cGQdriBjmSAiLqC&com.yourong.app.qqmc"
+        # print(message)
+        md5 = self.get_md5(message)
+        url = "http://qqmc.huitui.pro/tasks/complete"
+        data = {
+            "sign": md5,
+            "id": self.task_list[k],
+            "nonce": self.nonce,
+            "timestamp": t
+        }
+        response = requests.post(url, headers=self.headers_p, json=data)
+        # print(response.json())
+        if response.json().get('code') == 200001:
+            print(f"[{k}]任务成功，获得金币：{response.json().get('data').get('reward')}")
+            time.sleep(random.randint(30,40))
+            self.daily(k)
+        else:
+            print(f"[{k}]任务失败：{response.json().get('message')}")
+            if "验签异常" in response.json().get('message'):
+                time.sleep(random.randint(30,40))
+                self.daily(k)
     
-    def get_reward(self):
-        url = 'http://app.livelive.com.cn/api/v10/build_get'
-        params = {
-            "udid": self.uid,
-            "device_id": random_str(),
-            "did": self.did
+    def collect(self):
+        t = str(int(time.time()*1000-1))
+        self.get_nonce()
+        message = f"1&{t}&{self.nonce}&{self.device}&T50uedlIX0fsgr5i0cGQdriBjmSAiLqC&com.yourong.app.qqmc"
+        md5 = self.get_md5(message)
+        url = "http://qqmc.huitui.pro/lucky_cats/fast_collect"
+        data = {
+            "sign": md5,
+            "mode": 1,
+            "nonce": self.nonce,
+            "timestamp": t
         }
-        response = requests.get(url, headers=self.headers, params=params)
-        if 'SUCCESS' in response.json().get('message'):
-            print("领取成功")
+        response = requests.post(url, headers=self.headers_p, json=data)
+        if response.json().get('code') == 200001:
+            print("一键收取元宝成功")
         else:
-            print(f"领取失败：{response.json().get('message')}")
-
-    def get_did(self):
-        url = 'http://app.livelive.com.cn/api/v10/build_data'
-        params = {
-            "udid": self.uid,
-            "device_id": random_str(),
-            "mapIndex": "1"
-        }
-        response = requests.get(url, headers=self.headers, params=params)
-        if 'SUCCESS' in response.json().get('message'):
-            for did in response.json().get('data'):
-                self.did = did.get('did')
-                self.get_reward()
-        else:
-            print(f"获取店铺失败：{response.json().get('message')}")
+            print(f"一键收取元宝失败：{response.json().get('message')}")
+            if "验签异常" in response.json().get('message'):
+                time.sleep(5)
+                self.collect()
     
-    def bean(self):
-        url = 'http://app.livelive.com.cn/api/v10/forging_bean'
-        params = {
-            "udid": self.uid,
-            "device_id": random_str(),
-            "type": "1"
+    def bay_cat(self):
+        headers = {
+            "Authorization": self.token,
+            "X-Version-Code": "105",
+            "X-Platform": "android",
+            "X-System": "11",
+            "X-Brand": "Redmi",
+            "X-Device-ID": self.device,
+            "X-Client-Id": "com.yourong.app.qqmc",
+            "distributor-key": "qqmc",
+            "Content-Length": "0",
+            "Host": "qqmc.huitui.pro",
+            "Connection": "Keep-Alive",
+            "Accept-Encoding": "gzip",
+            "User-Agent": "okhttp/4.9.3"
         }
-        response = requests.get(url, headers=self.headers, params=params)
-        if 'SUCCESS' in response.json().get('message'):
-            print('锻造金豆成功')
+        url = "http://qqmc.huitui.pro/lucky_cats/purchase"
+        response = requests.post(url, headers=headers)
+        if response.json().get('code') == 200001:
+            print("购买喵喵成功")
         else:
-            print('锻造金豆失败')
+            print(f"购买喵喵失败：{response.json().get('message')}")
 
-    def user_info(self):
-        url = 'http://app.livelive.com.cn/api/v10/user_info'
-        params = {
-            "udid": self.uid,
-            "device_id": random_str(),
-        }
-        response = requests.get(url, headers=self.headers, params=params)
-        if 'SUCCESS' in response.json().get('message'):
-            jinbi = float(response.json().get('data').get('virtual_assets1'))
-            jindou = float(response.json().get('data').get('virtual_assets2'))
-            print(f"账户：\n金币：{jinbi}\n金豆{jindou}")
-            if jinbi >= 10:
-                for num in range(int(jinbi / 10)):
-                    self.bean()
+    
+    def cat_info(self):
+        url = "http://qqmc.huitui.pro/lucky_cats/info"
+        response = requests.get(url, headers=self.headers_g)
+        if response.json().get('code') == 200001:
+            self.jinbi = float(response.json().get('data').get('walletGold').get('balance'))
+            self.yuanbao = response.json().get('data').get('walletIngot').get('balance')
         else:
-            print(f"领取失败：{response.json().get('message')}")
-
+            print(f"获取信息失败：{response.json().get('message')}")
+            
     def main(self):
-        self.task_info()
-        time.sleep(2)
-        self.get_did()
-        self.user_info()
+        self.tasks()
+        if self.task_list != {}:
+            print('==============开始任务：日常任务==============')
+            for k in self.task_list:
+                self.daily(k)
+        print('==============开始任务：收取元宝==============')
+        self.collect()
+        self.cat_info()
+        if self.jinbi > 3000:
+            print('==============开始任务：购买喵喵==============')
+            for i in range(int(self.jinbi/3000)):
+                self.bay_cat()
+                time.sleep(2)
 
 
-if __name__ == "__main__":
-    userid = os.getenv('qmzy_uid')
-    if not userid:
-        print('请检查环境变量qmzy_uid')
+if __name__ in "__main__":
+    token = os.getenv('token_qqmc')
+    if not token:
+        print('请检查环境变量token_qqmc')
         exit()
-    userids = userid.split('@')
-    print(f'共有{len(userids)}个账号')
+    tokens = token.split('@')
+    print(f'共有{len(tokens)}个账号')
     if thread_TF:
         print('多线程已开启')
         threads = []
-        for i,userid in enumerate(userids):
+        for i,token in enumerate(tokens):
             print(f'----------开始第{i+1}个账号----------')
-            main = qmzy(userid)
+            main = qqmc(token)
             thread = threading.Thread(target=main.main)
             threads.append(thread)
             thread.start()
-        for t in threads:
-            t.join()
+        for thread in threads:
+            thread.join()
     else:
-        print('多线程已关闭')
-        for i,userid in enumerate(userids):
+        for i,token in enumerate(tokens):
+            print('多线程已关闭')
             print(f'----------开始第{i+1}个账号----------')
-            main = qmzy(userid)
-            main.main()
+            try:
+                main = qqmc(token)
+                main.main()
+            except:
+                pass
             print(f'----------结束第{i+1}个账号----------')
-            time.sleep(10)
+            time.sleep(random.randint(10,20))
+
